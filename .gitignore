@@ -1,0 +1,5 @@
+*.pyc
+__pychache__/
+__watchservices__/
+demo*.py
+logs/
