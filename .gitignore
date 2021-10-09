@@ -1,5 +1,6 @@
 *.pyc
-__pychache__/
-__watchservices__/
+*.txt
+__pycache__/
+__watchservice__/
 demo*.py
 logs/
