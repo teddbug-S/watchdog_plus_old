@@ -27,8 +27,9 @@ from enum import Enum
 from concurrent import futures
 
 from .manager import Manager
-from handlers import EventHandler
-from observers import ObserverPlus
+from ..handlers import EventHandler
+from ..observers import ObserverPlus
+from ..errors import AlreadyExists
 
 
 # Methods for starting an observer
@@ -42,6 +43,7 @@ class StartMethods(Enum):
 # and maintain uniqueness in their names
 
 class ObserversCollection(list):
+    """ A subclass of builtins.list to ensure unqiueness of items """
     def __init__(self):
         super().__init__() # call super init
 
@@ -49,19 +51,16 @@ class ObserversCollection(list):
         # check for already existing name
         for item in self:
             if item.name == value.name:
-                raise NameError(f"name conflict, an observer with the name {value.name!r} already exists.")
+                raise AlreadyExists(f"observer with name {item.name} already exists")
         # else append to collections
         super().append(value)
-
 
 
 # The manager 
 
 class ObserverManager(Manager):
-
-    def __init__(self, 
-        observer=None, handler=None
-    ):
+    """ A class to manage, create, start and schedule observers. """
+    def __init__(self, observer: ObserverPlus=None, handler=None):
         super().__init__()
         # some default classes
         self.observer_class = ObserverPlus if not observer else observer
@@ -82,23 +81,37 @@ class ObserverManager(Manager):
     # Private methods to do real work
     # use the public interfaces
 
-    def __start_observer(self, observer_):
-        """ Starts an observer """
+    def __start_observer(self, observer_: ObserverPlus, duration: int) -> None:
+        """ 
+        Starts an observer 
+        Args: 
+            observer_ : an ObserverPlus object
+            duration : number of seconds to keep observer alive default is forerver.
+        """
         observer_.start()
         # keep observer ALIVE
         try:
-            while True:
-                observer_.join(1)
+            if duration:
+                observer_.join(duration)
+            else:
+                while True:
+                    observer_.join(1)
         except KeyboardInterrupt:
             # stop observer
             observer_.stop()
             observer_.join()
 
-        # TODO: define a more stable way to stop an observer
-
-    def __start_observers(self, observers_, start_method):
-        """ Starts an iterable of observers all at once using 
-        method specified in the `start_method` parameter. """
+    def __start_observers(
+        self, observers_: list[ObserverPlus], start_method: StartMethods) -> None:
+        """ 
+        Starts an list of observers all at once using 
+        method specified in the `start_method` parameter.
+        
+        Args:
+            observers_: a list of observers to start
+            start_method: the concurrent method to use in launching the observers
+                defaults to threads which is equivalent to StartMethods.THREAD
+        """
 
         max_workers = len(observers_) # get max number of workers
         names = tuple(observer.name for observer in observers_) # get names of workers
@@ -129,8 +142,15 @@ class ObserverManager(Manager):
 
     # Creating observers
 
-    def create_observer(self, path, name = None):
-        """ Creates an schedules an observer """
+    def create_observer(self, path: os.PathLike, name: str = None) -> None:
+        """ 
+        Creates an observer scheduled to monitor path with handler as `self.handler` 
+        Args:
+            path: path to monitor
+            name: name to be given to the observer defaults to an auto-generated name.
+
+        NOTE: all created observers are kept in `self.all_observers`.
+        """
         observer_ = self.observer_class()
         observer_.schedule(self.handler, path)
         # generate a new name from path if name not given
@@ -139,8 +159,13 @@ class ObserverManager(Manager):
         self.all_observers_.append(observer_)
 
 
-    def create_observers(self, paths, names = None):
-        """ Creates and schedules an observer for each path in `paths` """
+    def create_observers(self, paths: list[os.PathLike], names: list[str] = None) -> None:
+        """ 
+        Creates observers for each path with `self.create_observer`
+        Args:
+            paths: a list of paths to monitor
+            names: a list of names to be assigned to each observer, 
+                defaults to behaviour of `self.create_observers`. """
         observers_ = (
             self.create_observer(path, name)
             for path, name in zip(paths, self.generate_names(paths))
@@ -151,13 +176,14 @@ class ObserverManager(Manager):
 
     # Starting observers
 
-    def start_observer(self, name):
+    def start_observer(self, name: str) -> None:
         """ Start an observer using it's name """
         observer_ = self.get_by_name(name, self.all_observers_)
         self.__start_observer(observer_) # start the observer
 
-    def start_observers(self, names, start_method=StartMethods.THREAD):
-        """ Starts an iterable of observers """
+    def start_observers(
+        self, names: list[str], start_method: StartMethods=StartMethods.THREAD) -> None:
+        """ Starts each observer that has name in the names arg, start method is threads. """
         observers_ = [self.get_by_name(name, self.all_observers_) for name in names]
         # start observers
         self.__start_observers(observers_, start_method)
