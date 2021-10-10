@@ -60,9 +60,10 @@ class EventHandler(FileSystemEventHandler):
 
 
     def on_any_event(self, event, name):
-        # self.logger.write_change(event, name)
-        if isdir(event.src_path): return
-        s_path = event.src_path[event.src_path.find(name):]
+        # filter unnecessary loggin of directory modifications
+        if isdir(event.src_path) and event.event_type == 'modified': return
+        # get only relative path
+        s_path = event.src_path[event.src_path.find(name.capitalize()):]
         print(f'<WatchDog: {name}> watched {s_path} got {event.event_type}')
 
     def on_closed(self, event, name):
