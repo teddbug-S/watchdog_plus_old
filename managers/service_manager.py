@@ -23,9 +23,13 @@
 
 import os
 import glob
+import shlex
+import signal
+from textwrap import dedent
+from subprocess import run
 
 from .manager import Manager
-from ..errors import NoServicesFound
+from ..errors import NoServicesFound, ServicePIDNotFound
 
 
 class WatchDogService:
@@ -34,6 +38,7 @@ class WatchDogService:
         self.name = name
         self.service_file = service_file
         self.run_on_startup = run_on_startup
+        self.__launch_command = str()
 
 
 class ServiceCollection(list):
@@ -74,6 +79,33 @@ class ServiceManager(Manager):
         except FileExistsError:
            ...
 
+
+    def __get_service_pid(self, name: str) -> int:
+        """ Returns the pid of a service """
+        command = shlex.join(
+            'ps', '-fU $USER', '|', 'grep', 'nohup python3 {}'.format(
+                shlex.quote(name))
+            )
+        output = run(
+            command, capture_output=True, shell=True, encoding='utf-8', text=True
+        ).stdout
+        
+        try:
+            # get pid from output
+            pid = int(output.splitlines()[0].split()[1])
+            # try to return pid or raise error
+        except (IndexError, ValueError):
+            raise ServicePIDNotFound(
+                f"the pid of the service {name} was not found, has it been launched?")
+        else:
+            return pid
+
+
+    def __send_signal(self, pid, sig) -> None:
+        """ Sends a signal to a process """
+        os.kill(pid, sig)
+
+    
     def __create_service(
         self, path: os.PathLike, name: str, service_file: str, handler) -> None:
         """ 
@@ -89,18 +121,17 @@ class ServiceManager(Manager):
         if from the observer manager and observers.
         """
         # instructions to create a service
-        instructions = [
-            # 'from sys import path as sys_path\n',
-            # f"sys_path.append(__file__.removesuffix('/{service_file}'))\n",
-            f'from {__name__} import {handler}\n' if handler else '',
-            'from watchdog_plus.managers import ObserverManager\n\n\n',
-            f'manager = ObserverManager(handler={handler})\n',
-            f'manager.create_observer({path!r}, name={name!r})\n',
-            f'manager.start_observer({name!r})\n',
-        ]
+        instructions = """
+            from {__name__} import {handler}\n' if handler else ''
+            from watchdog_plus.managers import ObserverManager
+
+            manager = ObserverManager(handler={handler})
+            manager.create_observer({path!r}, name={name!r})
+            manager.start_observer({name!r})"""
+
         # open and write instructions to file
         with open(service_file, 'w') as service_file_w:
-            service_file_w.writelines(instructions)
+            service_file_w.write(dedent(instructions))
 
 
     def __launch_service(self, service: WatchDogService, output_file=None) -> None:
@@ -111,8 +142,12 @@ class ServiceManager(Manager):
             output_file: a file the service logs to.
         """
         output_file = service.name if not output_file else output_file
+        launch_command = shlex.join([
+            'nohup', 'python3', '-u', '{}'.format(shlex.quote(service.service_file)),
+                 '>', '{} &'.format(shlex.quote(f"{output_file}.txt"))
+            ])
         # use superuser
-        os.system(f'nohup python3 -u {service.service_file} > {output_file}.txt &')
+        os.system(launch_command)
 
     
     # Public methods KEEP ON!
@@ -136,7 +171,7 @@ class ServiceManager(Manager):
             raise NoServicesFound("no services found. You should consider creating some.")
     
 
-    def create_service(self, path, run_on_startup = False, handler = None,):
+    def create_service(self, path, run_on_startup = False, handler = None) -> None:
         """ Creates a service """
         name = self.generate_name(path).lower() # generate a name for the service
         # generate a service file name based on some parameters
@@ -149,7 +184,20 @@ class ServiceManager(Manager):
             name, service_file, run_on_startup))
 
 
-    def launch_service(self, name, output_file=None):
+    def launch_service(self, name, output_file=None) -> None:
         """ Launches service by name """
         service = self.get_by_name(name, self.services)
         self.__launch_service(service)
+
+
+    def send_signal(self, name, sig) -> None:
+        """ Sends a signal to a service by it's name """
+        pid = self.__get_service_pid(name) # get pid of service
+        # send signal with provate method
+        self.__send_signal(sig, pid)
+
+
+    def stop_service(self, name) -> None:
+        """ Stops a service by sending a SIGKILL signal to it's pid."""
+        pid = self.__get_service_pid(name)
+        self.__send_signal(pid, signal.SIGKILL)
