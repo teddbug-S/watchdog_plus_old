@@ -74,7 +74,7 @@ class ServiceManager(Manager):
         self.services = ServiceCollection()
         # necessary files
         self.service_dir = '__watchservice__'
-        self.autostart_dir = 'autostart'
+        self.autostart_dir = os.path.join(self.service_dir, 'autostart')
         self.__make_service_dir() # initialize service directory
 
         # get objects from self.services 
