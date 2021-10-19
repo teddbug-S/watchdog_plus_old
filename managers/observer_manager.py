@@ -26,11 +26,10 @@ import os
 from enum import Enum
 from concurrent import futures
 
+from .errors import AlreadyExists
 from .manager import Manager
 from ..handlers import EventHandler
 from ..observers import ObserverPlus
-from ..errors import AlreadyExists
-
 
 # Methods for starting an observer
 
@@ -176,10 +175,10 @@ class ObserverManager(Manager):
 
     # Starting observers
 
-    def start_observer(self, name: str) -> None:
+    def start_observer(self, name: str, duration = 0) -> None:
         """ Start an observer using it's name """
         observer_ = self.get_by_name(name, self.all_observers_)
-        self.__start_observer(observer_) # start the observer
+        self.__start_observer(observer_, duration) # start the observer
 
     def start_observers(
         self, names: list[str], start_method: StartMethods=StartMethods.THREAD) -> None:

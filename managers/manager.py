@@ -1,18 +1,13 @@
-from ..errors import DoesNotExist
-
+from .errors import ServiceNotFound
 
 class Manager:
 
-    def __init__(self):
-        ...
-
-    
     def get_by_name(self, name, collection):
         """ Returns an observer by it's name """
         try:
             item = [i for i in collection if i.name == name ][0]
         except IndexError:
-            raise DoesNotExist(f"no service with name {name} exists")
+            raise ServiceNotFound(f"no service with name {name} exists")
         return item
 
     def generate_name(self, path) -> str:
