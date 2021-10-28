@@ -4,3 +4,4 @@ __pycache__/
 __watchservice__/
 demo*.py
 logs/
+venv

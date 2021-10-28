@@ -32,21 +32,37 @@ from collections import namedtuple
 from importlib import import_module
 
 
-class WatchDogServiceError(Exception):...
+class WatchDogServiceError(Exception):
+    ...
+
+
 # base class for all exceptions raised by a service
 
-class ServicePIDNotFound(WatchDogServiceError):...
+
+class ServicePIDNotFound(WatchDogServiceError):
+    ...
+
+
 # raised when service pid can't be returned
 
-class ServiceNotRunning(WatchDogServiceError):...
+
+class ServiceNotRunning(WatchDogServiceError):
+    ...
+
+
 # raised when service pid can't be returned
 
-class ServiceReloadError(WatchDogServiceError):...
+
+class ServiceReloadError(WatchDogServiceError):
+    ...
+
+
 # raised when service file not found during a service reload
 
 
 class ReadOnlyProperty(object):
-    """ A simple descriptor to make some properties readonly """
+    """A simple descriptor to make some properties readonly"""
+
     def __set_name__(self, owner, name):
         self.owner = owner
         self.name = name
@@ -56,34 +72,44 @@ class ReadOnlyProperty(object):
 
 
 class ServiceName(ReadOnlyProperty):
-
     def __get__(self, obj, objtype):
-        if (_name := getattr(obj, '_name')):
+        if _name := getattr(obj, "_name"):
             name = _name
         else:
-            path = getattr(obj, 'path')
-            name = path.strip('/').split('/')[-1]
-        
+            path = getattr(obj, "path")
+            name = path.strip("/").split("/")[-1]
+
         return name
 
 
 class ReadOnly(ReadOnlyProperty):
-
     def __get__(self, obj, objtype):
-        result = getattr(obj, f'_{self.owner.__name__}__get_{self.name}')
+        result = getattr(obj, f"_{self.owner.__name__}__get_{self.name}")
         return result()
 
-Autostart = namedtuple('Autostart', [
-            'Encoding', 'Name', 'Comment', 'Icon',
-            'Exec', 'Terminal', 'Type', 'Categories',
-            'X_GNOME_Autostart_enabled', 'X_GNOME_Autostart_Delay'])
+
+Autostart = namedtuple(
+    "Autostart",
+    [
+        "Encoding",
+        "Name",
+        "Comment",
+        "Icon",
+        "Exec",
+        "Terminal",
+        "Type",
+        "Categories",
+        "X_GNOME_Autostart_enabled",
+        "X_GNOME_Autostart_Delay",
+    ],
+)
 
 
 class WatchDogService:
     """
     WatchDogService provides interface for monitoring filesystem
     events from background by creating a backgound process that
-    does the filesystem monitoring using watchdog. Provides 
+    does the filesystem monitoring using watchdog. Provides
     interface to manage the process.
     """
 
@@ -91,7 +117,7 @@ class WatchDogService:
     launch_command = ReadOnly()
     pid = ReadOnly()
 
-    def __init__(self, path, name = None, run_on_startup = False, service_dir = None):
+    def __init__(self, path, name=None, run_on_startup=False, service_dir=None):
         self.run_on_startup = run_on_startup
         self.path = path
         self.is_active = False
@@ -100,7 +126,7 @@ class WatchDogService:
 
     @property
     def service_dir(self):
-        """ A directory to keep service files """
+        """A directory to keep service files"""
         if self._service_dir:
             try:
                 os.mkdir(self._service_dir)
@@ -112,94 +138,100 @@ class WatchDogService:
 
     @property
     def service_file_abs(self) -> str:
-        """ Returns absolute service filename path """
+        """Returns absolute service filename path"""
         path_ = os.path.abspath(self.service_file)
         return path_
 
     @property
     def service_file(self) -> str:
-        """ Generates service filename """
-        filename = os.path.join(self.service_dir,
-            "{}_service_true.py" if self.run_on_startup else "{}_service.py")
+        """Generates service filename"""
+        filename = os.path.join(
+            self.service_dir,
+            "{}_service_true.py" if self.run_on_startup else "{}_service.py",
+        )
         # return filename
         return filename.format(shlex.quote(self.name.lower()))
 
     @property
     def output_file(self) -> str:
-        """ Generates output filename """
+        """Generates output filename"""
         filename = f"{self.name.lower()}.txt"
         return filename
 
     @property
     def output_file_abs(self) -> str:
-        """ Returns absolute service filename path """
+        """Returns absolute service filename path"""
         path_ = os.path.abspath(self.output_file)
         return path_
 
     @property
     def system_autostart_dir(self):
-        """ System directory where autostart configurations are stored """
+        """System directory where autostart configurations are stored"""
         filename = f"{os.environ['HOME']}/.config/autostart"
         return filename
 
     @property
     def autostart_file(self):
-        """ Autostart file path. """
+        """Autostart file path."""
         # make available only if run_on_startup is true
         if not self.run_on_startup:
             raise AttributeError(
                 f"WatchDogService object with 'run_on_startup = False'"
-                " has no attribute 'autostart_file' ")
+                " has no attribute 'autostart_file' "
+            )
         filename = os.path.join(
-            self.service_dir, f"{self.name.lower()}_autostart.desktop")
+            self.service_dir, f"{self.name.lower()}_autostart.desktop"
+        )
         return filename
 
     @property
     def autostart(self):
-        """ The autostart configuration of the service """
+        """The autostart configuration of the service"""
         # make available only if run_on_startup is true
         if not self.run_on_startup:
             raise AttributeError(
                 f"WatchDogService object with 'run_on_startup = False'"
-                " has no attribute 'autostart' ")
+                " has no attribute 'autostart' "
+            )
         autostart = Autostart(
-            Encoding = 'UTF-8',
-            Name = self.name,
-            Comment = 'WatchDogService for monitoring filesystem events',
-            Icon = 'gnome-info',
-            Exec = self.__get_launch_command(
-                                             service_file=self.service_file_abs, 
-                                             output_file=self.output_file_abs),
-            Terminal = 'false',
-            Type = 'Application',
-            Categories = '',
-            X_GNOME_Autostart_enabled = 'true',
-            X_GNOME_Autostart_Delay = '0'
+            Encoding="UTF-8",
+            Name=self.name,
+            Comment="WatchDogService for monitoring filesystem events",
+            Icon="gnome-info",
+            Exec=self.__get_launch_command(
+                service_file=self.service_file_abs, output_file=self.output_file_abs
+            ),
+            Terminal="false",
+            Type="Application",
+            Categories="",
+            X_GNOME_Autostart_enabled="true",
+            X_GNOME_Autostart_Delay="0",
         )
-        
+
         return autostart
 
     def autostart_from_file(self, file_):
-        """ Gets autostart configurations from file """
+        """Gets autostart configurations from file"""
         if not self.run_on_startup:
             raise AttributeError(
                 f"WatchDogService object with 'run_on_startup = False'"
-                "has no attribute 'autostart_from_file' ")
+                "has no attribute 'autostart_from_file' "
+            )
         data = {}
         # open autostart file
         with open(file_) as file_w:
             for line in file_w.readlines():
-                if '=' in line: # check for keys & values
-                    key, value = lines.split('=')
+                if "=" in line:  # check for keys & values
+                    key, value = lines.split("=")
                     data[key] = value
         # use data to configure autostart
         self.configure_autostart(**data)
 
     def __write_autostart(self) -> None:
-        """ Writes autostart file """
-        header = '[Desktop Entry]\n' # opening header
+        """Writes autostart file"""
+        header = "[Desktop Entry]\n"  # opening header
         # open file
-        with open(self.autostart_file, 'w') as autostart_file_w:
+        with open(self.autostart_file, "w") as autostart_file_w:
             autostart_file_w.write(header)
             # lines to write to file
             lines = [
@@ -209,43 +241,47 @@ class WatchDogService:
             autostart_file_w.writelines(lines)
 
     def __copy_to_system(self):
-        """ Moves autostart file to system autostart directory """
+        """Moves autostart file to system autostart directory"""
         src, dest = self.autostart_file, self.system_autostart_dir
         # copy to system path
         shutil_copy(src, dest)
 
-
     def __get_launch_command(self, service_file=None, output_file=None) -> str:
-        """ Command used to launch service """
+        """Command used to launch service"""
         service_file = self.service_file if not service_file else service_file
         output_file = self.output_file if not output_file else output_file
-        launch_command = ' '.join(
-            ['nohup', 'python3', '-u', f'{shlex.quote(service_file)}',
-             f' > {shlex.quote(output_file)} &'])
+        launch_command = " ".join(
+            [
+                "nohup",
+                "python3",
+                "-u",
+                f"{shlex.quote(service_file)}",
+                f" > {shlex.quote(output_file)} &",
+            ]
+        )
         return launch_command
 
     def __get_pid(self) -> int:
-        """ Returns pid of service """
+        """Returns pid of service"""
         # initialise command
-        command = shlex.join(['ps', '-fU', shlex.quote(os.environ['USER'])])
+        command = shlex.join(["ps", "-fU", shlex.quote(os.environ["USER"])])
         output = run(command, text=True, capture_output=True, shell=True).stdout
         # search for the process
         pattern = f"python3 -u ./{self.name.lower()}_service"
         try:
-            match = [
-                line for line in output.splitlines() if pattern in line
-            ][0]
+            match = [line for line in output.splitlines() if pattern in line][0]
             pid = int(match.split()[1])
         except (IndexError, ValueError):
             raise ServicePIDNotFound(
-                f"the pid of service {self.name.lower()!r} not found, is it running?")
+                f"the pid of service {self.name.lower()!r} not found, is it running?"
+            )
         else:
             return pid
 
     def __schedule(self, handler, output_file) -> None:
-        """ Setup a service """
+        """Setup a service"""
         # instructions to create a service
-        handler_import = f"from {__name__} import {handler}\n" if handler else ''
+        handler_import = f"from {__name__} import {handler}\n" if handler else ""
         instructions = f"""
            {handler_import}
             from watchdog_plus.managers import ObserverManager
@@ -263,21 +299,21 @@ class WatchDogService:
             # write autostart file if service should run on startup
             self.__write_autostart()
             self.__copy_to_system()
-        with open(self.service_file, 'w') as service_file_w:
+        with open(self.service_file, "w") as service_file_w:
             service_file_w.write(dedent(instructions))
 
     @classmethod
     def from_service_file(cls, name):
-        """ Creates a service object from undeleted service file """
+        """Creates a service object from undeleted service file"""
         # load service file
-        service_file = glob.glob(f'{name}_service_*.py')
-        autostart_file = glob.glob(f'{name}_autostart.desktop')
+        service_file = glob.glob(f"{name}_service_*.py")
+        autostart_file = glob.glob(f"{name}_autostart.desktop")
 
         if service_file:
             service_file = service_file[0]
             # get path from service file
-            path = getattr(import_module(service_file), 'path')
-            run_on_startup = True if service_file.endswith('true.py') else False
+            path = getattr(import_module(service_file), "path")
+            run_on_startup = True if service_file.endswith("true.py") else False
             # create service object
             service = cls(path, run_on_startup=run_on_startup)
             # additional setups for service with run_on_startup true
@@ -292,8 +328,8 @@ class WatchDogService:
         else:
             raise ServiceReloadError(f"can't find service file for {name}")
 
-    def schedule(self, output_file = None, handler = None):
-        """ Schedule service with handler and path """
+    def schedule(self, output_file=None, handler=None):
+        """Schedule service with handler and path"""
         if not output_file:
             output_file = self.output_file
         else:
@@ -302,19 +338,19 @@ class WatchDogService:
         self.__schedule(handler=handler, output_file=output_file)
 
     def configure_autostart(self, **parameters):
-        """ Configures autostart with parameters in the parameters argument """
+        """Configures autostart with parameters in the parameters argument"""
         autostart = self.autostart
         # set attribute of autostart to provided keys
         for key, value in parameters.items():
-            if key == 'x_gnome_autostart_enabled':
+            if key == "x_gnome_autostart_enabled":
                 continue
-            elif key == 'x_gnome_autostart_delay':
-                value = str(value) # convert back to string
+            elif key == "x_gnome_autostart_delay":
+                value = str(value)  # convert back to string
             # set autostart keys
             setattr(autostart, key, value)
 
     def clean_files(self) -> None:
-        """ Deletes created service files on exit """
+        """Deletes created service files on exit"""
         try:
             os.remove(self.service_file)
             os.remove(self.output_file)
@@ -324,14 +360,14 @@ class WatchDogService:
             print(e)
 
     def start(self) -> None:
-        """ Start service """
+        """Start service"""
         command = self.launch_command
         os.system(command)
         # set is_active to True
         self.is_active = True
 
     def stop(self) -> None:
-        """ Stops service by sending a SIGKILL signal to it's pid """
+        """Stops service by sending a SIGKILL signal to it's pid"""
         if self.is_active:
             # send a kill signal
             self.send_signal(SIGKILL)
@@ -340,10 +376,10 @@ class WatchDogService:
             raise ServiceNotRunning(f"can't call stop on an inactive service.")
 
     def clean_stop(self) -> None:
-        """ Stops service also deletes files created. """
-        self.stop() # stop the service
+        """Stops service also deletes files created."""
+        self.stop()  # stop the service
         self.clean_files()
 
     def send_signal(self, signal) -> None:
-        """ Send a signal to service """
+        """Send a signal to service"""
         os.kill(self.pid, signal)

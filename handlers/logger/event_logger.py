@@ -39,7 +39,7 @@ class EventLogger:
             self.file_ = os.path.join(log_dir, file_)
 
     def read_current_data(self) -> dict:
-        """ Tries to read existing data from `self.file_` """
+        """Tries to read existing data from `self.file_`"""
         try:
             with open(self.file_) as file_r:
                 data = json.load(file_r)
@@ -47,9 +47,9 @@ class EventLogger:
             # raise
             data = dict()
         return data
-    
+
     def analyse_change(self, event, name) -> dict:
-        """ Analyses the event and makes creates a data dict """
+        """Analyses the event and makes creates a data dict"""
         data = self.read_current_data()
         if data:
             # append new change to existing one
@@ -65,15 +65,15 @@ class EventLogger:
         else:
             # initialize each event type with an empty dict
             data = dict.fromkeys(
-                ['created', 'modified', 'deleted', 'moved', 'closed'], dict())
+                ["created", "modified", "deleted", "moved", "closed"], dict()
+            )
             # add new change to an event type
             data[event.event_type] = {name: [event.src_path]}
-        
+
         return data
 
-
     def write_change(self, event, name):
-        """ Writes changes to file. """
+        """Writes changes to file."""
         change = self.analyse_change(event, name)
-        with open(self.file_, 'w') as file_w:    
+        with open(self.file_, "w") as file_w:
             json.dump(change, file_w, indent=4)

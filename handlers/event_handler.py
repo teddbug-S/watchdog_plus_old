@@ -23,12 +23,16 @@
 
 from os.path import isdir
 
-from watchdog.events import (EVENT_TYPE_CLOSED, EVENT_TYPE_CREATED,
-                             EVENT_TYPE_DELETED, EVENT_TYPE_MODIFIED,
-                             EVENT_TYPE_MOVED, FileSystemEventHandler)
+from watchdog.events import (
+    EVENT_TYPE_CLOSED,
+    EVENT_TYPE_CREATED,
+    EVENT_TYPE_DELETED,
+    EVENT_TYPE_MODIFIED,
+    EVENT_TYPE_MOVED,
+    FileSystemEventHandler,
+)
 
 from .logger import EventLogger
-
 
 
 class EventHandler(FileSystemEventHandler):
@@ -37,7 +41,7 @@ class EventHandler(FileSystemEventHandler):
     to dispatch the name of the specific thread triggering the event.
     """
 
-    def __init__(self, log_dir='logs', file_='changes.json'):
+    def __init__(self, log_dir="logs", file_="changes.json"):
         super().__init__()
         self.logger = EventLogger(file_=file_, log_dir=log_dir)
 
@@ -58,13 +62,13 @@ class EventHandler(FileSystemEventHandler):
             EVENT_TYPE_CLOSED: self.on_closed,
         }[event.event_type](event, name)
 
-
     def on_any_event(self, event, name):
         # filter unnecessary loggin of directory modifications
-        if isdir(event.src_path) and event.event_type == 'modified': return
+        if isdir(event.src_path) and event.event_type == "modified":
+            return
         # get only relative path
-        s_path = event.src_path[event.src_path.find(name.capitalize()):]
-        print(f'<WatchDog: {name}> watched {s_path} got {event.event_type}')
+        s_path = event.src_path[event.src_path.find(name.capitalize()) :]
+        print(f"<WatchDog: {name}> watched {s_path} got {event.event_type}")
 
     def on_closed(self, event, name):
         self.logger.write_change(event, name)
@@ -82,5 +86,3 @@ class EventHandler(FileSystemEventHandler):
 
     def on_moved(self, event, name):
         self.logger.write_change(event, name)
-
-
