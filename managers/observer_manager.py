@@ -33,6 +33,7 @@ from ..observers import ObserverPlus
 
 # Methods for starting an observer
 
+
 class StartMethods(Enum):
     THREAD = 1
     MULTIPROCESSES = 2
@@ -41,10 +42,12 @@ class StartMethods(Enum):
 # A collection to keep observers
 # and maintain uniqueness in their names
 
+
 class ObserversCollection(list):
-    """ A subclass of builtins.list to ensure unqiueness of items """
+    """A subclass of builtins.list to ensure unqiueness of items"""
+
     def __init__(self):
-        super().__init__() # call super init
+        super().__init__()  # call super init
 
     def append(self, value):
         # check for already existing name
@@ -55,11 +58,13 @@ class ObserversCollection(list):
         super().append(value)
 
 
-# The manager 
+# The manager
+
 
 class ObserverManager(Manager):
-    """ A class to manage, create, start and schedule observers. """
-    def __init__(self, observer: ObserverPlus=None, handler=None):
+    """A class to manage, create, start and schedule observers."""
+
+    def __init__(self, observer: ObserverPlus = None, handler=None):
         super().__init__()
         # some default classes
         self.observer_class = ObserverPlus if not observer else observer
@@ -71,19 +76,18 @@ class ObserverManager(Manager):
     # Some helper method
 
     def write_positions(self, position_data):
-        """ Writes position data to file """
-        file_ = os.path.join(self.handle.logger.log_dir, 'position_data.json')
-        with open(file_, 'w') as file_w:
+        """Writes position data to file"""
+        file_ = os.path.join(self.handle.logger.log_dir, "position_data.json")
+        with open(file_, "w") as file_w:
             json.dump(position_data, file_w)
-
 
     # Private methods to do real work
     # use the public interfaces
 
     def __start_observer(self, observer_: ObserverPlus, duration: int) -> None:
-        """ 
-        Starts an observer 
-        Args: 
+        """
+        Starts an observer
+        Args:
             observer_ : an ObserverPlus object
             duration : number of seconds to keep observer alive default is forerver.
         """
@@ -101,19 +105,20 @@ class ObserverManager(Manager):
             observer_.join()
 
     def __start_observers(
-        self, observers_: list[ObserverPlus], start_method: StartMethods) -> None:
-        """ 
-        Starts an list of observers all at once using 
+        self, observers_: list[ObserverPlus], start_method: StartMethods
+    ) -> None:
+        """
+        Starts an list of observers all at once using
         method specified in the `start_method` parameter.
-        
+
         Args:
             observers_: a list of observers to start
             start_method: the concurrent method to use in launching the observers
                 defaults to threads which is equivalent to StartMethods.THREAD
         """
 
-        max_workers = len(observers_) # get max number of workers
-        names = tuple(observer.name for observer in observers_) # get names of workers
+        max_workers = len(observers_)  # get max number of workers
+        names = tuple(observer.name for observer in observers_)  # get names of workers
 
         # do some real work ;)
         # using threads
@@ -132,7 +137,7 @@ class ObserverManager(Manager):
             # initiate a thread pool executor max_workers equal to number of observers
             with futures.ProcessPoolExecutor(max_workers=max_workers) as process_pool:
                 # set name for each worker process
-                for process, name in zip(process_pool._processes , names):
+                for process, name in zip(process_pool._processes, names):
                     process.name = name
                 # assign work to each
                 process_pool.map(self.__start_observer, observers_)
@@ -142,8 +147,8 @@ class ObserverManager(Manager):
     # Creating observers
 
     def create_observer(self, path: os.PathLike, name: str = None) -> None:
-        """ 
-        Creates an observer scheduled to monitor path with handler as `self.handler` 
+        """
+        Creates an observer scheduled to monitor path with handler as `self.handler`
         Args:
             path: path to monitor
             name: name to be given to the observer defaults to an auto-generated name.
@@ -157,14 +162,15 @@ class ObserverManager(Manager):
         # returns an observer
         self.all_observers_.append(observer_)
 
-
-    def create_observers(self, paths: list[os.PathLike], names: list[str] = None) -> None:
-        """ 
+    def create_observers(
+        self, paths: list[os.PathLike], names: list[str] = None
+    ) -> None:
+        """
         Creates observers for each path with `self.create_observer`
         Args:
             paths: a list of paths to monitor
-            names: a list of names to be assigned to each observer, 
-                defaults to behaviour of `self.create_observers`. """
+            names: a list of names to be assigned to each observer,
+                defaults to behaviour of `self.create_observers`."""
         observers_ = (
             self.create_observer(path, name)
             for path, name in zip(paths, self.generate_names(paths))
@@ -172,17 +178,17 @@ class ObserverManager(Manager):
         # update created observers
         self.all_observers_.update(observers_)
 
-
     # Starting observers
 
-    def start_observer(self, name: str, duration = 0) -> None:
-        """ Start an observer using it's name """
+    def start_observer(self, name: str, duration=0) -> None:
+        """Start an observer using it's name"""
         observer_ = self.get_by_name(name, self.all_observers_)
-        self.__start_observer(observer_, duration) # start the observer
+        self.__start_observer(observer_, duration)  # start the observer
 
     def start_observers(
-        self, names: list[str], start_method: StartMethods=StartMethods.THREAD) -> None:
-        """ Starts each observer that has name in the names arg, start method is threads. """
+        self, names: list[str], start_method: StartMethods = StartMethods.THREAD
+    ) -> None:
+        """Starts each observer that has name in the names arg, start method is threads."""
         observers_ = [self.get_by_name(name, self.all_observers_) for name in names]
         # start observers
         self.__start_observers(observers_, start_method)

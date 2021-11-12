@@ -1,5 +1,4 @@
 from .observer_plus import ObserverPlus
 
 
-__all__ = [ 'ObserverPlus' ]
-
+__all__ = ["ObserverPlus"]
