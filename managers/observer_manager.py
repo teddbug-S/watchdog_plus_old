@@ -36,7 +36,7 @@ from ..observers import ObserverPlus
 
 class StartMethods(Enum):
     THREAD = 1
-    MULTIPROCESSES = 2
+    MULTIPROCESS = 2
 
 
 # A collection to keep observers
@@ -133,7 +133,7 @@ class ObserverManager(Manager):
 
         # do some real work ;)
         # using processes
-        elif start_method == StartMethods.MULTIPROCESSES:
+        elif start_method == StartMethods.MULTIPROCESS:
             # initiate a thread pool executor max_workers equal to number of observers
             with futures.ProcessPoolExecutor(max_workers=max_workers) as process_pool:
                 # set name for each worker process
@@ -188,7 +188,7 @@ class ObserverManager(Manager):
     def start_observers(
         self, names: list[str], start_method: StartMethods = StartMethods.THREAD
     ) -> None:
-        """Starts each observer that has name in the names arg, start method is threads."""
+        """Starts each observer that has name in the names arg, start method is StartMethods.THREAD"""
         observers_ = [self.get_by_name(name, self.all_observers_) for name in names]
         # start observers
         self.__start_observers(observers_, start_method)

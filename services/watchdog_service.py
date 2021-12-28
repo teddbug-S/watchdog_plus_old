@@ -108,7 +108,7 @@ Autostart = namedtuple(
 class WatchDogService:
     """
     WatchDogService provides interface for monitoring filesystem
-    events from background by creating a backgound process that
+    events from background by creating a background process that
     does the filesystem monitoring using watchdog. Provides
     interface to manage the process.
     """
