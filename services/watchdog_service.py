@@ -222,7 +222,7 @@ class WatchDogService:
         with open(file_) as file_w:
             for line in file_w.readlines():
                 if "=" in line:  # check for keys & values
-                    key, value = lines.split("=")
+                    key, value = line.split("=")
                     data[key] = value
         # use data to configure autostart
         self.configure_autostart(**data)
