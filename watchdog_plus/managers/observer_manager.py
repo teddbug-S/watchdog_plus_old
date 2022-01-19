@@ -146,7 +146,7 @@ class ObserverManager(Manager):
 
     # Creating observers
 
-    def create_observer(self, path: os.PathLike, name: str = None) -> None:
+    def create_observer(self, path: os.PathLike, name: str = None) -> ObserverPlus:
         """
         Creates an observer scheduled to monitor path with handler as `self.handler`
         Args:
@@ -161,6 +161,8 @@ class ObserverManager(Manager):
         observer_.name = name if name else self.generate_name(path)
         # returns an observer
         self.all_observers_.append(observer_)
+        # return the observer
+        return observer_
 
     def create_observers(
         self, paths: list[os.PathLike], names: list[str] = None
@@ -181,7 +183,7 @@ class ObserverManager(Manager):
     # Starting observers
 
     def start_observer(self, name: str, duration=0) -> None:
-        """Start an observer using it's name"""
+        """Start an observer using its name"""
         observer_ = self.get_by_name(name, self.all_observers_)
         self.__start_observer(observer_, duration)  # start the observer
 

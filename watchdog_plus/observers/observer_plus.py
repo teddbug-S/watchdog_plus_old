@@ -26,7 +26,7 @@ from watchdog.observers import Observer
 class ObserverPlus(Observer):
     """
     ObserverPlus directly subclasses watchdog.observers.Observer
-    to override dispatch_events method to dispatch each event with the
+    to override the `dispatch_events` method to dispatch each event with the
     name of the thread triggering that change.
     """
 

@@ -5,3 +5,5 @@ __watchservice__/
 demo*.py
 logs/
 venv
+.idea/
+.vscode/
